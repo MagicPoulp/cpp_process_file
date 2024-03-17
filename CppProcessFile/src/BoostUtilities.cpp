@@ -15,10 +15,8 @@ namespace boost_utilities
         using namespace boost;
         using namespace spirit::qi;
         using utf8_iter = boost::u8_to_u32_iterator<const char*>;
-
-        const char8_t* u8word = new char8_t(word.size());
-        auto tbegin           = utf8_iter{ word.c_str() };
-        auto tend             = utf8_iter{ word.c_str() + word.size() };
+        auto tbegin     = utf8_iter{ word.c_str() };
+        auto tend       = utf8_iter{ word.c_str() + word.size() };
         std::vector<uint32_t> wordInFourBytes;
         parse(tbegin, tend, *standard_wide::char_, wordInFourBytes);
         for (auto&& code_point : wordInFourBytes) {
