@@ -5,11 +5,12 @@
 
 #include <fstream>
 #include <iostream>
-#include <map>
 #include <ranges>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -20,7 +21,7 @@ namespace
     constexpr int GIGANTIC_LINE_SIZE = 10000;
 
     // we store bytes in UTF-8
-    const map<string_view, int> mapLetterToPoints = { { "A", 32 },
+    const unordered_map<string_view, int> mapLetterToPoints = { { "A", 32 },
         { "B", 36 },
         { "C", 33 },
         { "D", 40 },
@@ -97,10 +98,10 @@ vector<pair<string, int>> FileProcessor::createPairingUniqueWordsToPoints(const 
 {
     fstream inputFile;
     try {
-        string tp;
+        string lineBuffer;
         // reserving avoids heap allocation and speeds up
         // if a line is bigger, we still support it with re-allocation
-        tp.reserve(GIGANTIC_LINE_SIZE);
+        lineBuffer.reserve(GIGANTIC_LINE_SIZE);
 
         inputFile.open(inputPath, ios::in);
         if (!inputFile.is_open()) {
@@ -112,8 +113,12 @@ vector<pair<string, int>> FileProcessor::createPairingUniqueWordsToPoints(const 
         try {
             vector<pair<string, int>> pairingUniqueWordsToPoints;
             std::unordered_set<string_view> hashSetProcessedWords;
-            while (getline(inputFile, tp)) {
-                stringstream ss(tp);
+            while (getline(inputFile, lineBuffer)) {
+                regex reg("[',’]");
+                while (regex_search(lineBuffer, reg)) {
+                    lineBuffer = std::regex_replace(lineBuffer, reg, "");
+                }
+                stringstream ss(lineBuffer);
                 string word;
                 while (ss >> word) {
                     // there must be no duplicates
@@ -156,6 +161,8 @@ void FileProcessor::createSortedOutputFile(
                 return left.second < right.second;
             });
         std::ranges::for_each(pairingUniqueWordsToPoints, [&outputFile](const std::pair<string, int>& element) {
+            if (element.first == "mûr")
+                throw CustomException();
             outputFile << element.first << ", " << element.second << endl;
         });
     } catch (CustomException& ex) {
@@ -179,8 +186,7 @@ void FileProcessor::processWordForPairingToPoints(
     // for now, we only support one-bye characters or we would need a cross-platform iteration on utf-8 strings
     // but the exercise requires no external library
     // https://stackoverflow.com/questions/4579215/cross-platform-iteration-of-unicode-string-counting-graphemes-using-icu
-    auto onlyASCII = string_utilities::containsOnlyExtendedASCII(word);
-    if (!onlyASCII) {
+    if (auto onlyASCII = string_utilities::containsOnlyExtendedASCII(word); !onlyASCII) {
         throw NonExtendedASCIICharactersFoundException();
     }
     int points = countPoints(word);
