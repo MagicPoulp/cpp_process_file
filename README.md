@@ -12,7 +12,7 @@ cd build
 cmake build ..
 cd ..
 cmake --build build
-./build/Debug/cpp_process_file.exe %cd%\assets\texte.txt
+.\build\Debug\cpp_process_file.exe %cd%\assets\texte.txt
 ```
 
 # Run from Visual Studio
@@ -21,4 +21,9 @@ Add Debbugging/Command line arguments to the project, and put the fullpath the t
 "C:\Users\ThierryVilmartEXT\repos\temp\cpp_process_file\CppProcessFile\assets\texte.txt"
 Select the project as Startup Project
 Run in Visual Studio
+
+# how the boost include sample was made
+
+Boost is too big but one can generate a small subset using the bcp command:
+bcp  boost/regex/pending/unicode_iterator.hpp boost/spirit/include/qi.hpp output
 
