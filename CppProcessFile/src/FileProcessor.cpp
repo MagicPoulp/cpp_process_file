@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iostream>
 #include <map>
+#include <ranges>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -141,7 +142,7 @@ vector<pair<string, int>> FileProcessor::createPairingUniqueWordsToPoints(const 
 }
 
 void FileProcessor::createSortedOutputFile(
-    const string& outputPath, const vector<pair<string, int>>& pairingUniqueWordsToPoints) const
+    const string& outputPath, vector<pair<string, int>>& pairingUniqueWordsToPoints) const
 {
     fstream outputFile;
     try {
@@ -150,7 +151,13 @@ void FileProcessor::createSortedOutputFile(
         if (!outputFile.is_open()) {
             throw FileOpenException("Error - Impossible to open the output file.");
         }
-        //     //outputFile << word << ", " << points << endl;
+        ranges::sort(
+            pairingUniqueWordsToPoints, [](const std::pair<string, int>& left, const std::pair<string, int>& right) {
+                return left.second < right.second;
+            });
+        std::ranges::for_each(pairingUniqueWordsToPoints, [&outputFile](const std::pair<string, int>& element) {
+            outputFile << element.first << ", " << element.second << endl;
+        });
     } catch (CustomException& ex) {
         outputFile.close();
         throw ex;

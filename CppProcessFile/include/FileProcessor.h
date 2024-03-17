@@ -13,6 +13,6 @@ public:
         const std::string& word, std::vector<std::pair<std::string, int>>& pairingUniqueWordsToPoints) const;
     int countPoints(const std::string& word) const;
     std::vector<std::pair<std::string, int>> createPairingUniqueWordsToPoints(const std::string& outputPath) const;
-    void createSortedOutputFile(const std::string& outputPath,
-        const std::vector<std::pair<std::string, int>>& pairingUniqueWordsToPoints) const;
+    void createSortedOutputFile(
+        const std::string& outputPath, std::vector<std::pair<std::string, int>>& pairingUniqueWordsToPoints) const;
 };
