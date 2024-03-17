@@ -9,6 +9,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <vector>
 
 using namespace std;
@@ -85,13 +86,15 @@ namespace
         { "z", 26 } };
 } // namespace
 
-// It is much simpler to just save the data in memory and process it and save results.
-// I chose to do only streaming to manage larger sets of data.
-// And we can parallelize on independent chunks of data (not done here)
-void FileProcessor::process(const std::string& inputPath, const std::string& outputPath)
+void FileProcessor::process(const string& inputPath, const string& outputPath) const
+{
+    vector<pair<string, int>> pairingUniqueWordsToPoints = createPairingUniqueWordsToPoints(inputPath);
+    createSortedOutputFile(outputPath, pairingUniqueWordsToPoints);
+}
+
+vector<pair<string, int>> FileProcessor::createPairingUniqueWordsToPoints(const string& inputPath) const
 {
     fstream inputFile;
-    fstream outputFile;
     try {
         string tp;
         // reserving avoids heap allocation and speeds up
@@ -102,20 +105,25 @@ void FileProcessor::process(const std::string& inputPath, const std::string& out
         if (!inputFile.is_open()) {
             throw FileOpenException("Error - Impossible to open the input file.");
         }
-        inputFile.exceptions(std::ifstream::failbit | std::ifstream::badbit);
+        // failbit is set for end of file so we ignore it
+        inputFile.exceptions(std::ifstream::badbit);
 
-        outputFile.open(outputPath, ios::trunc | ios::out);
-        if (!outputFile.is_open()) {
-            throw FileOpenException("Error - Impossible to open the output file.");
-        }
         try {
+            vector<pair<string, int>> pairingUniqueWordsToPoints;
+            std::unordered_set<string_view> hashSetProcessedWords;
             while (getline(inputFile, tp)) {
                 stringstream ss(tp);
                 string word;
                 while (ss >> word) {
-                    processWord(word, outputFile);
+                    // there must be no duplicates
+                    if (hashSetProcessedWords.contains(word)) {
+                        continue;
+                    }
+                    processWordForPairingToPoints(word, pairingUniqueWordsToPoints);
+                    hashSetProcessedWords.insert(word);
                 }
             }
+            return pairingUniqueWordsToPoints;
         } catch (std::ifstream::failure& e) {
             std::cerr << "Exception happened: " << e.what() << "\n"
                       << "Error bits are: "
@@ -125,16 +133,35 @@ void FileProcessor::process(const std::string& inputPath, const std::string& out
         }
     } catch (CustomException& ex) {
         inputFile.close();
+        throw ex;
+    } catch (exception& ex) {
+        inputFile.close();
+        throw ex;
+    }
+}
+
+void FileProcessor::createSortedOutputFile(
+    const string& outputPath, const vector<pair<string, int>>& pairingUniqueWordsToPoints) const
+{
+    fstream outputFile;
+    try {
+
+        outputFile.open(outputPath, ios::trunc | ios::out);
+        if (!outputFile.is_open()) {
+            throw FileOpenException("Error - Impossible to open the output file.");
+        }
+        //     //outputFile << word << ", " << points << endl;
+    } catch (CustomException& ex) {
         outputFile.close();
         throw ex;
-    } catch (std::exception& ex) {
-        inputFile.close();
+    } catch (exception& ex) {
         outputFile.close();
         throw ex;
     }
 }
 
-void FileProcessor::processWord(const string& word, fstream& outputFile) const
+void FileProcessor::processWordForPairingToPoints(
+    const string& word, vector<pair<std::string, int>>& pairingUniqueWordsToPoints) const
 {
     // for now, we only support UTF8 input, we discard latin1
     if (auto pos = string_utilities::find_first_not_utf8(word); pos < word.length()) {
@@ -149,10 +176,8 @@ void FileProcessor::processWord(const string& word, fstream& outputFile) const
     if (!onlyASCII) {
         throw NonExtendedASCIICharactersFoundException();
     }
-
     int points = countPoints(word);
-    // const cast should be avoided, but it is nice to have the fstream as a mbmer of the class
-    outputFile << word << ", " << points << endl;
+    pairingUniqueWordsToPoints.emplace_back(pair(word, points));
 }
 
 int FileProcessor::countPoints(const std::string& word) const
@@ -168,6 +193,7 @@ int FileProcessor::countPoints(const std::string& word) const
             total += points;
         } catch (out_of_range&) {
             // any other character counts as 0
+            std::ignore = 0;
         }
     }
     return total;
