@@ -6,12 +6,7 @@
 class FileProcessor
 {
 public:
-    explicit FileProcessor(std::string& inputPath, std::string& outputPath);
-    ~FileProcessor();
-
-    void process();
-
-private:
-    std::fstream m_inputFile;
-    std::fstream m_outputFile;
+    void process(const std::string& inputPath, const std::string& outputPath);
+    void processWord(const std::string& word, std::fstream& outputFile) const;
+    int countPoints(const std::string& word) const;
 };

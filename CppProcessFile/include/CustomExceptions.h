@@ -1,7 +1,69 @@
-class ProgramArgumentsException : std::exception {
+class CustomException : public std::exception
+{
+public:
     using std::exception::exception;
+
+    explicit CustomException(const char* message)
+    {
+        whatMessage = message;
+    }
+
+    const char* what() const noexcept override
+    {
+        return whatMessage.c_str();
+    }
+
+protected:
+    std::string whatMessage;
 };
 
-class FileOpenException : std::exception {
-    using std::exception::exception;
+class ProgramArgumentsException : public CustomException
+{
+public:
+    using CustomException::CustomException;
+    ProgramArgumentsException()
+    {
+        whatMessage = "Error - ProgramArgumentsException";
+    }
+};
+
+class FileOpenException : public CustomException
+{
+public:
+    using CustomException::CustomException;
+    FileOpenException()
+    {
+        whatMessage = "Error - FileOpenException";
+    }
+};
+
+class FileReadException : public CustomException
+{
+public:
+    using CustomException::CustomException;
+    FileReadException()
+    {
+        whatMessage = "Error - FileReadException";
+    }
+};
+
+class NonUtf8CharactersFoundException : public CustomException
+{
+public:
+    using CustomException::CustomException;
+    NonUtf8CharactersFoundException()
+    {
+        whatMessage = "Error - NonUtf8CharactersFoundException";
+    }
+};
+
+// temporary since non-ascii characters can be supported in UTF8, we just need a library to iterate them
+class NonExtendedASCIICharactersFoundException : public CustomException
+{
+public:
+    using CustomException::CustomException;
+    NonExtendedASCIICharactersFoundException()
+    {
+        whatMessage = "Error - NonExtendedASCIICharactersFoundException";
+    }
 };
