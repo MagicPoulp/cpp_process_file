@@ -1,10 +1,13 @@
 
 #include "FileProcessor.h"
+#include "BoostUtilities.h"
 #include "CustomExceptions.h"
 #include "StringUtilities.h"
 
+#include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <ranges>
 #include <regex>
 #include <sstream>
@@ -14,10 +17,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include <boost/range.hpp>
-#include <boost/regex/pending/unicode_iterator.hpp>
-#include <boost/spirit/include/qi.hpp>
-
 using namespace std;
 
 namespace
@@ -25,71 +24,71 @@ namespace
     constexpr int GIGANTIC_LINE_SIZE = 10000;
 
     // we store bytes in UTF-8
-    const unordered_map<string_view, int> mapLetterToPoints = { { "A", 32 },
-        { "B", 36 },
-        { "C", 33 },
-        { "D", 40 },
-        { "E", 41 },
-        { "F", 47 },
-        { "G", 31 },
-        { "H", 27 },
-        { "I", 49 },
-        { "J", 28 },
-        { "K", 30 },
-        { "L", 42 },
-        { "M", 29 },
-        { "N", 38 },
-        { "O", 51 },
-        { "P", 43 },
-        { "Q", 45 },
-        { "R", 39 },
-        { "S", 35 },
-        { "T", 52 },
-        { "U", 37 },
-        { "V", 46 },
-        { "W", 34 },
-        { "X", 48 },
-        { "Y", 44 },
-        { "Z", 50 },
-        { "é", 60 },
-        { "è", 61 },
-        { "ê", 62 },
-        { "à", 63 },
-        { "â", 64 },
-        { "ë", 65 },
-        { "û", 66 },
-        { "ù", 67 },
-        { "î", 68 },
-        { "ç", 69 },
-        { "ô", 70 },
-        { "ö", 71 },
-        { "ü", 72 },
-        { "a", 1 },
-        { "b", 4 },
-        { "c", 5 },
-        { "d", 8 },
-        { "e", 10 },
-        { "f", 11 },
-        { "g", 13 },
-        { "h", 16 },
-        { "i", 18 },
-        { "j", 19 },
-        { "k", 21 },
-        { "l", 21 },
-        { "m", 23 },
-        { "n", 2 },
-        { "o", 3 },
-        { "p", 6 },
-        { "q", 7 },
-        { "r", 9 },
-        { "s", 12 },
-        { "t", 14 },
-        { "u", 15 },
-        { "v", 17 },
-        { "w", 20 },
-        { "x", 24 },
-        { "y", 25 },
-        { "z", 26 } };
+    const unordered_map<u8string_view, int> mapLetterToPoints = { { u8"A", 32 },
+        { u8"B", 36 },
+        { u8"C", 33 },
+        { u8"D", 40 },
+        { u8"E", 41 },
+        { u8"F", 47 },
+        { u8"G", 31 },
+        { u8"H", 27 },
+        { u8"I", 49 },
+        { u8"J", 28 },
+        { u8"K", 30 },
+        { u8"L", 42 },
+        { u8"M", 29 },
+        { u8"N", 38 },
+        { u8"O", 51 },
+        { u8"P", 43 },
+        { u8"Q", 45 },
+        { u8"R", 39 },
+        { u8"S", 35 },
+        { u8"T", 52 },
+        { u8"U", 37 },
+        { u8"V", 46 },
+        { u8"W", 34 },
+        { u8"X", 48 },
+        { u8"Y", 44 },
+        { u8"Z", 50 },
+        { u8"é", 60 },
+        { u8"è", 61 },
+        { u8"ê", 62 },
+        { u8"à", 63 },
+        { u8"â", 64 },
+        { u8"ë", 65 },
+        { u8"û", 66 },
+        { u8"ù", 67 },
+        { u8"î", 68 },
+        { u8"ç", 69 },
+        { u8"ô", 70 },
+        { u8"ö", 71 },
+        { u8"ü", 72 },
+        { u8"a", 1 },
+        { u8"b", 4 },
+        { u8"c", 5 },
+        { u8"d", 8 },
+        { u8"e", 10 },
+        { u8"f", 11 },
+        { u8"g", 13 },
+        { u8"h", 16 },
+        { u8"i", 18 },
+        { u8"j", 19 },
+        { u8"k", 21 },
+        { u8"l", 21 },
+        { u8"m", 23 },
+        { u8"n", 2 },
+        { u8"o", 3 },
+        { u8"p", 6 },
+        { u8"q", 7 },
+        { u8"r", 9 },
+        { u8"s", 12 },
+        { u8"t", 14 },
+        { u8"u", 15 },
+        { u8"v", 17 },
+        { u8"w", 20 },
+        { u8"x", 24 },
+        { u8"y", 25 },
+        { u8"z", 26 } };
 } // namespace
 
 void FileProcessor::process(const string& inputPath, const string& outputPath) const
@@ -201,43 +200,36 @@ void FileProcessor::processWordForPairingToPoints(
     int points = countPoints(word);
     pairingUniqueWordsToPoints.emplace_back(pair(word, points));
 }
+/*
 
+
+// https://stackoverflow.com/questions/20059602/can-stdbegin-work-with-array-parameters-and-if-so-how
+template <class T, size_t N>
+pair<u8_to_u32_iterator<const char*>, u8_to_u32_iterator<const char*>> makeIterator(T (&array)[N])
+{
+    u8_to_u32_iterator<const char*> tbegin(std::begin(utf8_text));
+    u8_to_u32_iterator<const char*> tend(std::end(utf8_text));
+    return pair(tbegin, tend);
+}
+*/
 // "ü" takes 2 bytes
 // so we need to iterate over multi-byte characters in UTF8
 // https://stackoverflow.com/questions/13679669/how-to-use-boostspirit-to-parse-utf-8
 int FileProcessor::countPoints(const std::string& word) const
 {
-    using namespace boost;
-    using namespace spirit::qi;
-    using namespace std;
-
-    const char8_t* u8word = new char8_t(word.size());
-    try {
-        auto&& utf8_text = u8word;
-        u8_to_u32_iterator<const char*> tbegin(begin(utf8_text)), tend(end(utf8_text));
-
-        vector<uint32_t> result;
-        parse(tbegin, tend, *standard_wide::char_, result);
-        for (auto&& code_point : result)
-            cout << "&#" << code_point << ";";
-        cout << endl;
-
-        // TOODO: we need a cross platform way to iterate over a utf-8 string
-        int total = 0;
-        int size  = 0;
-        for (const char& c : word) {
-            string key{ c };
-            try {
-                int points = mapLetterToPoints.at(key);
-                total += points;
-            } catch (out_of_range&) {
-                // any other character counts as 0
-                std::ignore = 0;
-            }
+    int total                                 = 0;
+    std::function<void(uint32_t&)> funIterate = [&total](uint32_t& codePoint) {
+        // tested to work on trema u code 252
+        // char32_t codePoint2 = (char32_t)252;
+        std::u8string key = reinterpret_cast<const char8_t*>(boost_utilities::codepoint_to_utf8(codePoint).c_str());
+        try {
+            int points = mapLetterToPoints.at(key);
+            total += points;
+        } catch (out_of_range&) {
+            // any other character counts as 0
+            std::ignore = 0;
         }
-        return total;
-    } catch (exception& ex) {
-        delete[] (u8word);
-        throw ex;
-    }
+    };
+    boost_utilities::iterateOnMultiByteCharacters(word, funIterate);
+    return total;
 }
