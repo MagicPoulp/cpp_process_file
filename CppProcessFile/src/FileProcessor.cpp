@@ -117,19 +117,25 @@ vector<pair<string, int>> FileProcessor::createPairingUniqueWordsToPoints(const 
             vector<pair<string, int>> pairingUniqueWordsToPoints;
             std::unordered_set<string_view> hashSetProcessedWords;
             while (getline(inputFile, lineBuffer)) {
-                regex reg("[',’]");
+                regex reg("[',]");
+                // here we cannot replace teh multi byte apostrophe, but we do it in countPoints
                 while (regex_search(lineBuffer, reg)) {
                     lineBuffer = std::regex_replace(lineBuffer, reg, "");
                 }
                 stringstream ss(lineBuffer);
                 string word;
                 while (ss >> word) {
-                    // there must be no duplicates
-                    if (hashSetProcessedWords.contains(word)) {
-                        continue;
+                    std::vector<std::string> splitWords;
+                    // this is to split the word into multiple words on the multi-byte apostrophe
+                    if (splitWordOnMultiByteApostrophe(word, splitWords)) {
+                        std::ranges::for_each(splitWords,
+                            [this, &hashSetProcessedWords, &pairingUniqueWordsToPoints](std::string& newWord) {
+                                processWordWithoutDuplicates(
+                                    newWord, hashSetProcessedWords, pairingUniqueWordsToPoints);
+                            });
+                    } else {
+                        processWordWithoutDuplicates(word, hashSetProcessedWords, pairingUniqueWordsToPoints);
                     }
-                    processWordForPairingToPoints(word, pairingUniqueWordsToPoints);
-                    hashSetProcessedWords.insert(word);
                 }
             }
             return pairingUniqueWordsToPoints;
@@ -147,6 +153,18 @@ vector<pair<string, int>> FileProcessor::createPairingUniqueWordsToPoints(const 
         inputFile.close();
         throw ex;
     }
+}
+
+void FileProcessor::processWordWithoutDuplicates(const string& word,
+    std::unordered_set<string_view>& hashSetProcessedWords,
+    vector<pair<string, int>>& pairingUniqueWordsToPoints) const
+{
+    // there must be no duplicates
+    if (hashSetProcessedWords.contains(word)) {
+        return;
+    }
+    processWordForPairingToPoints(word, pairingUniqueWordsToPoints);
+    hashSetProcessedWords.insert(word);
 }
 
 void FileProcessor::validateEncoding(const string& word) const
@@ -200,21 +218,24 @@ void FileProcessor::processWordForPairingToPoints(
     int points = countPoints(word);
     pairingUniqueWordsToPoints.emplace_back(pair(word, points));
 }
-/*
 
-
-// https://stackoverflow.com/questions/20059602/can-stdbegin-work-with-array-parameters-and-if-so-how
-template <class T, size_t N>
-pair<u8_to_u32_iterator<const char*>, u8_to_u32_iterator<const char*>> makeIterator(T (&array)[N])
+// the apostrophe, U2019 has code 8217
+// https://unicode.scarfboy.com/?s=U%2b2019
+bool FileProcessor::splitWordOnMultiByteApostrophe(const std::string& word, vector<std::string>& splitWords) const
 {
-    u8_to_u32_iterator<const char*> tbegin(std::begin(utf8_text));
-    u8_to_u32_iterator<const char*> tend(std::end(utf8_text));
-    return pair(tbegin, tend);
+    if (string trimmedWord; boost_utilities::replaceMultiByteApostropheWithBlank(word, trimmedWord)) {
+        stringstream check1(trimmedWord);
+        string buffer1;
+        // Tokenizing with regard to space ' '
+        while (getline(check1, buffer1, ' ')) {
+            splitWords.push_back(buffer1);
+        }
+        return true;
+    }
+    return false;
 }
-*/
-// "ü" takes 2 bytes
-// so we need to iterate over multi-byte characters in UTF8
-// https://stackoverflow.com/questions/13679669/how-to-use-boostspirit-to-parse-utf-8
+
+// "ü" takes 2 bytes in UTF-8, so we need to iterate on multi-byte characters
 int FileProcessor::countPoints(const std::string& word) const
 {
     int total                                 = 0;
