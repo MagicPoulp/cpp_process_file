@@ -6,15 +6,19 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <regex>
 
 using namespace std;
 
 int main(int argc, char* argv[])
 {
-    string filePath = getFilePathFromArgv(argc, argv);
-    FileProcessor fileProcessor;
-    fileProcessor.process(filePath);
-    cout << "Processing the file" << endl << filePath << endl;
+    string inputPath = getFilePathFromArgv(argc, argv);
+    regex reg("(.txt)$");
+    string outputPath = std::regex_replace(inputPath, reg, ".count.txt");
+    cout << "Processing the file" << endl << inputPath << endl;
+    FileProcessor fileProcessor(inputPath, outputPath);
+    fileProcessor.process();
+    cout << "Processing success. The output lies in the file" << endl << outputPath << endl;
 }
 
 std::string getFilePathFromArgv(int argc, char* argv[]) {
