@@ -14,6 +14,10 @@
 #include <unordered_set>
 #include <vector>
 
+#include <boost/range.hpp>
+#include <boost/regex/pending/unicode_iterator.hpp>
+#include <boost/spirit/include/qi.hpp>
+
 using namespace std;
 
 namespace
@@ -146,6 +150,22 @@ vector<pair<string, int>> FileProcessor::createPairingUniqueWordsToPoints(const 
     }
 }
 
+void FileProcessor::validateEncoding(const string& word) const
+{
+    // for now, we only support UTF8 input, we discard latin1
+    if (auto pos = string_utilities::find_first_not_utf8(word); pos < word.length()) {
+        throw NonUtf8CharactersFoundException();
+    }
+
+    // temporary
+    // for now, we only support one-bye characters or we would need a cross-platform iteration on utf-8 strings
+    // but the exercise requires no external library
+    // https://stackoverflow.com/questions/4579215/cross-platform-iteration-of-unicode-string-counting-graphemes-using-icu
+    if (auto onlyASCII = string_utilities::containsOnlyExtendedASCII(word); !onlyASCII) {
+        throw NonExtendedASCIICharactersFoundException();
+    }
+}
+
 void FileProcessor::createSortedOutputFile(
     const string& outputPath, vector<pair<string, int>>& pairingUniqueWordsToPoints) const
 {
@@ -177,37 +197,47 @@ void FileProcessor::createSortedOutputFile(
 void FileProcessor::processWordForPairingToPoints(
     const string& word, vector<pair<std::string, int>>& pairingUniqueWordsToPoints) const
 {
-    // for now, we only support UTF8 input, we discard latin1
-    if (auto pos = string_utilities::find_first_not_utf8(word); pos < word.length()) {
-        throw NonUtf8CharactersFoundException();
-    }
-
-    // temporary
-    // for now, we only support one-bye characters or we would need a cross-platform iteration on utf-8 strings
-    // but the exercise requires no external library
-    // https://stackoverflow.com/questions/4579215/cross-platform-iteration-of-unicode-string-counting-graphemes-using-icu
-    if (auto onlyASCII = string_utilities::containsOnlyExtendedASCII(word); !onlyASCII) {
-        throw NonExtendedASCIICharactersFoundException();
-    }
+    validateEncoding(word);
     int points = countPoints(word);
     pairingUniqueWordsToPoints.emplace_back(pair(word, points));
 }
 
+// "ü" takes 2 bytes
+// so we need to iterate over multi-byte characters in UTF8
+// https://stackoverflow.com/questions/13679669/how-to-use-boostspirit-to-parse-utf-8
 int FileProcessor::countPoints(const std::string& word) const
 {
+    using namespace boost;
+    using namespace spirit::qi;
+    using namespace std;
 
-    // TOODO: we need a cross platform way to iterate over a utf-8 string
-    // but the exercise requires no external library
-    int total = 0;
-    for (const char& c : word) {
-        string key{ c };
-        try {
-            int points = mapLetterToPoints.at(key);
-            total += points;
-        } catch (out_of_range&) {
-            // any other character counts as 0
-            std::ignore = 0;
+    const char8_t* u8word = new char8_t(word.size());
+    try {
+        auto&& utf8_text = u8word;
+        u8_to_u32_iterator<const char*> tbegin(begin(utf8_text)), tend(end(utf8_text));
+
+        vector<uint32_t> result;
+        parse(tbegin, tend, *standard_wide::char_, result);
+        for (auto&& code_point : result)
+            cout << "&#" << code_point << ";";
+        cout << endl;
+
+        // TOODO: we need a cross platform way to iterate over a utf-8 string
+        int total = 0;
+        int size  = 0;
+        for (const char& c : word) {
+            string key{ c };
+            try {
+                int points = mapLetterToPoints.at(key);
+                total += points;
+            } catch (out_of_range&) {
+                // any other character counts as 0
+                std::ignore = 0;
+            }
         }
+        return total;
+    } catch (exception& ex) {
+        delete[] (u8word);
+        throw ex;
     }
-    return total;
 }
