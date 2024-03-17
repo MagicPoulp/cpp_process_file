@@ -118,7 +118,7 @@ vector<pair<string, int>> FileProcessor::createPairingUniqueWordsToPoints(const 
             std::unordered_set<string_view> hashSetProcessedWords;
             while (getline(inputFile, lineBuffer)) {
                 regex reg("[',]");
-                // here we cannot replace teh multi byte apostrophe, but we do it in countPoints
+                // here we cannot replace the multi byte apostrophe, but we do it in countPoints
                 while (regex_search(lineBuffer, reg)) {
                     lineBuffer = std::regex_replace(lineBuffer, reg, "");
                 }
