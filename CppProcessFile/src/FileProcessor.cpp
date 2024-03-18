@@ -118,7 +118,7 @@ vector<pair<string, int>> FileProcessor::createPairingUniqueWordsToPoints(const 
             std::unordered_set<string_view> hashSetProcessedWords;
             while (getline(inputFile, lineBuffer)) {
                 regex reg("[',]");
-                // here we cannot replace the multi byte apostrophe, but we do it in countPoints
+                // here we cannot replace the multi byte apostrophe, but we do it in splitWordOnMultiByteApostrophe
                 while (regex_search(lineBuffer, reg)) {
                     lineBuffer = std::regex_replace(lineBuffer, reg, "");
                 }
@@ -190,8 +190,6 @@ void FileProcessor::createSortedOutputFile(
                 return left.second < right.second;
             });
         std::ranges::for_each(pairingUniqueWordsToPoints, [&outputFile](const std::pair<string, int>& element) {
-            if (element.first == "mûr")
-                throw CustomException();
             outputFile << element.first << ", " << element.second << endl;
         });
     } catch (CustomException& ex) {
