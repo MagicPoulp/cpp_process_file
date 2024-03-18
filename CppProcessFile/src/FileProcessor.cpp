@@ -173,14 +173,6 @@ void FileProcessor::validateEncoding(const string& word) const
     if (auto pos = string_utilities::find_first_not_utf8(word); pos < word.length()) {
         throw NonUtf8CharactersFoundException();
     }
-
-    // temporary
-    // for now, we only support one-bye characters or we would need a cross-platform iteration on utf-8 strings
-    // but the exercise requires no external library
-    // https://stackoverflow.com/questions/4579215/cross-platform-iteration-of-unicode-string-counting-graphemes-using-icu
-    if (auto onlyASCII = string_utilities::containsOnlyExtendedASCII(word); !onlyASCII) {
-        throw NonExtendedASCIICharactersFoundException();
-    }
 }
 
 void FileProcessor::createSortedOutputFile(

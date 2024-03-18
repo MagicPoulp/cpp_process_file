@@ -103,17 +103,6 @@ namespace string_utilities
         return size_t(s.data() - S.data());
     }
 
-    // https://stackoverflow.com/questions/48212992/how-to-find-out-if-there-is-any-non-ascii-character-in-a-string-with-a-file-path
-    bool containsOnlyExtendedASCII(const std::string& filePath)
-    {
-        for (auto c : filePath) {
-            if (static_cast<unsigned char>(c) > 255) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     // https://gist.github.com/GenesisFR/cceaf433d5b42dcdddecdddee0657292
     static std::string replaceAll(std::string str, const std::string& from, const std::string& to)
     {

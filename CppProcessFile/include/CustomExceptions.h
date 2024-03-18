@@ -56,14 +56,3 @@ public:
         whatMessage = "Error - NonUtf8CharactersFoundException";
     }
 };
-
-// temporary since non-ascii characters can be supported in UTF8, we just need a library to iterate them
-class NonExtendedASCIICharactersFoundException : public CustomException
-{
-public:
-    using CustomException::CustomException;
-    NonExtendedASCIICharactersFoundException()
-    {
-        whatMessage = "Error - NonExtendedASCIICharactersFoundException";
-    }
-};
