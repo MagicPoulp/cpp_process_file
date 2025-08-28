@@ -171,26 +171,17 @@ void FileProcessor::createSortedOutputFile(
     const string& outputPath, vector<pair<string, int>>& pairingUniqueWordsToPoints) const
 {
     fstream outputFile;
-    try {
-
-        outputFile.open(outputPath, ios::trunc | ios::out);
-        if (!outputFile.is_open()) {
-            throw FileOpenException("Error - Impossible to open the output file.");
-        }
-        ranges::sort(
-            pairingUniqueWordsToPoints, [](const std::pair<string, int>& left, const std::pair<string, int>& right) {
-                return left.second < right.second;
-            });
-        std::ranges::for_each(pairingUniqueWordsToPoints, [&outputFile](const std::pair<string, int>& element) {
-            outputFile << element.first << ", " << element.second << endl;
-        });
-    } catch (CustomException& ex) {
-        outputFile.close();
-        throw ex;
-    } catch (exception& ex) {
-        outputFile.close();
-        throw ex;
+    outputFile.open(outputPath, ios::trunc | ios::out);
+    if (!outputFile.is_open()) {
+        throw FileOpenException("Error - Impossible to open the output file.");
     }
+    ranges::sort(
+        pairingUniqueWordsToPoints, [](const std::pair<string, int>& left, const std::pair<string, int>& right) {
+            return left.second < right.second;
+        });
+    std::ranges::for_each(pairingUniqueWordsToPoints, [&outputFile](const std::pair<string, int>& element) {
+        outputFile << element.first << ", " << element.second << endl;
+    });
 }
 
 void FileProcessor::processWordForPairingToPoints(
