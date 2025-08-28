@@ -100,58 +100,50 @@ void FileProcessor::process(const string& inputPath, const string& outputPath) c
 vector<pair<string, int>> FileProcessor::createPairingUniqueWordsToPoints(const string& inputPath) const
 {
     fstream inputFile;
+    string lineBuffer;
+    // reserving avoids heap allocation and speeds up
+    // if a line is bigger, we still support it with re-allocation
+    lineBuffer.reserve(GIGANTIC_LINE_SIZE);
+
+    inputFile.open(inputPath, ios::in);
+    if (!inputFile.is_open()) {
+        throw FileOpenException("Error - Impossible to open the input file.");
+    }
+    // failbit is set for end of file so we ignore it
+    inputFile.exceptions(std::ifstream::badbit);
+
     try {
-        string lineBuffer;
-        // reserving avoids heap allocation and speeds up
-        // if a line is bigger, we still support it with re-allocation
-        lineBuffer.reserve(GIGANTIC_LINE_SIZE);
-
-        inputFile.open(inputPath, ios::in);
-        if (!inputFile.is_open()) {
-            throw FileOpenException("Error - Impossible to open the input file.");
-        }
-        // failbit is set for end of file so we ignore it
-        inputFile.exceptions(std::ifstream::badbit);
-
-        try {
-            vector<pair<string, int>> pairingUniqueWordsToPoints;
-            std::unordered_set<string_view> hashSetProcessedWords;
-            while (getline(inputFile, lineBuffer)) {
-                regex reg("[',]");
-                // here we cannot replace the multi byte apostrophe, but we do it in splitWordOnMultiByteApostrophe
-                while (regex_search(lineBuffer, reg)) {
-                    lineBuffer = std::regex_replace(lineBuffer, reg, "");
-                }
-                stringstream ss(lineBuffer);
-                string word;
-                while (ss >> word) {
-                    std::vector<std::string> splitWords;
-                    // this is to split the word into multiple words on the multi-byte apostrophe
-                    if (splitWordOnMultiByteApostrophe(word, splitWords)) {
-                        std::ranges::for_each(splitWords,
-                            [this, &hashSetProcessedWords, &pairingUniqueWordsToPoints](std::string& newWord) {
-                                processWordWithoutDuplicates(
-                                    newWord, hashSetProcessedWords, pairingUniqueWordsToPoints);
-                            });
-                    } else {
-                        processWordWithoutDuplicates(word, hashSetProcessedWords, pairingUniqueWordsToPoints);
-                    }
+        vector<pair<string, int>> pairingUniqueWordsToPoints;
+        std::unordered_set<string_view> hashSetProcessedWords;
+        while (getline(inputFile, lineBuffer)) {
+            regex reg("[',]");
+            // here we cannot replace the multi byte apostrophe, but we do it in splitWordOnMultiByteApostrophe
+            while (regex_search(lineBuffer, reg)) {
+                lineBuffer = std::regex_replace(lineBuffer, reg, "");
+            }
+            stringstream ss(lineBuffer);
+            string word;
+            while (ss >> word) {
+                std::vector<std::string> splitWords;
+                // this is to split the word into multiple words on the multi-byte apostrophe
+                if (splitWordOnMultiByteApostrophe(word, splitWords)) {
+                    std::ranges::for_each(splitWords,
+                        [this, &hashSetProcessedWords, &pairingUniqueWordsToPoints](std::string& newWord) {
+                            processWordWithoutDuplicates(
+                                newWord, hashSetProcessedWords, pairingUniqueWordsToPoints);
+                        });
+                } else {
+                    processWordWithoutDuplicates(word, hashSetProcessedWords, pairingUniqueWordsToPoints);
                 }
             }
-            return pairingUniqueWordsToPoints;
-        } catch (std::ifstream::failure& e) {
-            std::cerr << "Exception happened: " << e.what() << "\n"
-                      << "Error bits are: "
-                      << "\nfailbit: " << inputFile.fail() << "\neofbit: " << inputFile.eof()
-                      << "\nbadbit: " << inputFile.bad() << std::endl;
-            throw FileReadException();
         }
-    } catch (CustomException& ex) {
-        inputFile.close();
-        throw ex;
-    } catch (exception& ex) {
-        inputFile.close();
-        throw ex;
+        return pairingUniqueWordsToPoints;
+    } catch (std::ifstream::failure& e) {
+        std::cerr << "Exception happened: " << e.what() << "\n"
+                  << "Error bits are: "
+                  << "\nfailbit: " << inputFile.fail() << "\neofbit: " << inputFile.eof()
+                  << "\nbadbit: " << inputFile.bad() << std::endl;
+        throw FileReadException();
     }
 }
 
